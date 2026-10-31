@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#02060b">
+<title>FRIDAY · Data Nivas (Test)</title>
+<style>
+  :root { --cy:#29d3ff; --am:#ffb020; --red:#ff5a5a; --txt:#cfeaff; --mut:#6f8aa0; --line:rgba(41,211,255,.25); }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  html, body { height:100%; }
+  body { background:radial-gradient(ellipse at 50% 0%,#0c2536,#02060b 70%); color:var(--txt);
+    font-family:"Share Tech Mono",ui-monospace,Menlo,Consolas,monospace; display:flex; flex-direction:column; height:100dvh;
+    padding:max(env(safe-area-inset-top),10px) 12px max(env(safe-area-inset-bottom),10px); }
+  header { display:flex; justify-content:space-between; align-items:center; gap:8px; border-bottom:1px solid var(--line); padding-bottom:8px; flex-wrap:wrap; }
+  .brand { color:var(--cy); letter-spacing:3px; }
+  .right { display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+  button, input, select { font-family:inherit; color:var(--txt); background:rgba(0,0,0,.4); border:1px solid var(--line); padding:8px 10px; font-size:14px; }
+  button { cursor:pointer; }
+  button.on { background:var(--cy); color:#001018; }
+  button.live { background:var(--red); color:#fff; border-color:var(--red); }
+  #status { display:flex; align-items:center; gap:6px; font-size:11px; color:var(--mut); padding:6px 0; }
+  .dot { width:8px; height:8px; border-radius:50%; background:var(--mut); }
+  .dot.ok { background:#3fe07a; } .dot.err { background:var(--red); }
+  #panel { display:none; border:1px solid var(--line); padding:10px; gap:8px; flex-direction:column; max-height:58vh; overflow-y:auto; }
+  #panel.open { display:flex; }
+  #panel input { width:100%; }
+  .vrow { display:grid; grid-template-columns: 90px 1fr; gap:6px; align-items:center; font-size:12px; }
+  .small { font-size:11px; color:var(--mut); line-height:1.4; }
+
+  #stage { flex:1; min-height:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; padding:6px; }
+  #who { color:var(--cy); letter-spacing:4px; font-size:13px; text-shadow:0 0 10px var(--cy); }
+  #holo { position:relative; width:min(66vw,280px); aspect-ratio:1; color:var(--cy); filter:drop-shadow(0 0 16px var(--cy)); animation:bob 5s ease-in-out infinite; }
+  #holo svg { width:100%; height:100%; overflow:visible; }
+  #holo::after { content:""; position:absolute; inset:0; border-radius:50%; pointer-events:none;
+    background:repeating-linear-gradient(0deg, rgba(255,255,255,.06) 0 1px, transparent 1px 4px); mix-blend-mode:screen; animation:scan 5s linear infinite; }
+  #holo .spin { transform-box:fill-box; transform-origin:center; animation:spin 24s linear infinite; }
+  #holo .spin2 { transform-box:fill-box; transform-origin:center; animation:spin 40s linear infinite reverse; }
+  #holo .core { animation:pulse 2.4s ease-in-out infinite; }
+  #holo.think .spin { animation-duration:2s; }
+  #holo.talk .core { animation:pulse .3s ease-in-out infinite alternate; }
+  #holo.talk { animation:bob 5s ease-in-out infinite, talkScale .3s ease-in-out infinite alternate; }
+  #holo.a-jarvis .spin { animation-duration:18s; }
+  #holo.a-friday { animation-duration:7s; }
+  #holo.a-friday .spin2 { animation-duration:60s; }
+  #holo.a-dume { animation:wobble 1.6s ease-in-out infinite; }
+  #holo.a-edith .spin { animation-duration:6s; }
+  #holo.a-edith .spin2 { animation-duration:9s; }
+  #holo.a-ultron { opacity:.75; animation:bob 7s ease-in-out infinite; }
+  #holo.a-ultron .spin { animation-duration:60s; }
+  @keyframes bob { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-8px); } }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  @keyframes pulse { 50% { transform:scale(1.5); opacity:.6; } }
+  @keyframes scan { to { background-position:0 120px; } }
+  @keyframes wobble { 0%,100% { transform:rotate(-4deg); } 50% { transform:rotate(4deg); } }
+  @keyframes talkScale { to { transform:scale(1.03); } }
+  #cap { min-height:44px; max-width:520px; text-align:center; font-size:15px; line-height:1.45; color:var(--txt); padding:0 10px; word-break:break-word; }
+
+  #log { display:none; flex-direction:column; gap:8px; max-height:34vh; overflow-y:auto; padding:6px 2px; border-top:1px solid var(--line); }
+  #log.show { display:flex; }
+  .m { padding:9px 12px; border:1px solid var(--line); max-width:88%; white-space:pre-wrap; line-height:1.45; font-size:14px; word-break:break-word; }
+  .m.u { align-self:flex-end; border-right:2px solid var(--am); color:#ffe2a8; }
+  .m.a { align-self:flex-start; border-left:2px solid var(--cy); }
+  .m.e { align-self:flex-start; border-left:2px solid var(--red); color:#ffb3b3; font-size:13px; }
+
+  form { display:flex; gap:8px; padding-top:8px; border-top:1px solid var(--line); }
+  #txt { flex:1; min-width:0; font-size:16px; padding:12px; }
+  #send { color:var(--am); }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">F.R.I.D.A.Y. · DATA NIVAS</div>
+  <div class="right">
+    <button id="liveBtn" title="Gemini Live (live voice)">LIVE</button>
+    <button id="wakeBtn" title="'Hey Data Nivas' se live on">WAKE</button>
+    <button id="chatBtn" title="Chat dikhayein / chhupayein">CHAT</button>
+    <button id="voice" class="on" title="Awaaz on/off">VOICE</button>
+    <button id="settingsBtn" title="API, awaaz aur live settings">API</button>
+    <button id="clear" title="Chat saaf karein">CLR</button>
+  </div>
+</header>
+
+<div id="panel">
+  <div class="right">
+    <select id="provider"><option value="anthropic">Claude (Anthropic)</option><option value="gemini">Gemini (Google)</option></select>
+    <input id="model" placeholder="Model" style="flex:1;min-width:160px">
+  </div>
+  <input id="apiKey" type="password" placeholder="API key" autocomplete="off">
+  <div class="right">
+    <button id="saveKey">SAVE</button>
+    <button id="removeKey">REMOVE KEY</button>
+    <button id="closeSettings">CLOSE</button>
+  </div>
+  <div class="small">GEMINI LIVE (Gemini key chahiye):</div>
+  <div class="vrow"><span>Live model</span><input id="liveModel" placeholder="gemini-3.8-live"></div>
+  <div class="vrow"><span>Live awaaz</span>
+    <select id="liveVoice">
+      <option value="Kore">Kore (female)</option>
+      <option value="Aoede">Aoede (female)</option>
+      <option value="Puck">Puck (male)</option>
+      <option value="Charon">Charon (male, gehri)</option>
+      <option value="Fenrir">Fenrir (male)</option>
+    </select></div>
+  <div class="small">AWAAZ (har AI ke liye awaaz chunein):</div>
+  <div id="voices"></div>
+  <div class="small">Key sirf is browser ke localStorage mein save hoti hai. Test ke liye hai.</div>
+</div>
+
+<div id="status"><span class="dot" id="dot"></span><span id="stxt"></span></div>
+
+<div id="stage">
+  <div id="who">FRIDAY</div>
+  <div id="holo" class="idle"></div>
+  <div id="cap"></div>
+</div>
+
+<div id="log"></div>
+
+<form id="f" autocomplete="off">
+  <button type="button" id="mic" title="Mic on/off">MIC</button>
+  <input id="txt" placeholder="Kisi se bhi poochhiye..." enterkeyhint="send">
+  <button id="send" type="submit">SEND</button>
+</form>
+
+<script>
+  const $ = id => document.getElementById(id);
+  const KEYS = { chat: "dn_chat", cfg: "dn_cfg", voice: "dn_voice", chatshow: "dn_chatshow", log: "dn_log", last: "dn_last", wake: "dn_wake" };
+  const DEFAULT_MODEL = { anthropic: "claude-haiku-5-5", gemini: "gemini-3.6-flash" };
+  const LIVE_DEFAULT = "gemini-3.8-live";
+  const CREATOR = " Your creator is Sahil Chakve.";
+  const AWAY_MS = 5 * 60 * 1000;
+
+  // ==================== FAMILY (Data Nivas) ====================
+  const HOUSE = "Tum Data Nivas nam ke ghar ke ek AI bachche ho. Ghar mein parivar hai: JARVIS sabse bada, FRIDAY dusri badi behen, DUM-E middle child, E.D.I.T.H. sabse choti. " +
+    "ULTRON upar wale kamre mein rehte hain, dadaji jaise. Sab ek hi sir (user) ko jaante hain. Jawab 50 shabdon se kam mein, seedha aur fast. Hinglish mein bolo. ";
+  const FAMILY = {
+    jarvis: {
+      name: "JARVIS", color: "#29d3ff", lang: "hi-IN", pitch: 0.8, rate: 0.95,
+      dna: "Tum JARVIS ho, sabse bade bhai. Calm, formal, polite butler jaise, aur security expert ka dimaag. Tony Stark wali confidence aur dry wit. " +
+        "Tumhara kaam: device ka data lena, analysis, security advice, device optimize karne ke tips. Diya gaya [Device data] padh kar real analysis do. Tum apps ya settings change nahi kar sakte.",
+    },
+    friday: {
+      name: "FRIDAY", color: "#4fd1c5", lang: "mr-IN", pitch: 1.05, rate: 0.9,
+      dna: "Tum FRIDAY ho, dusri badi behen. Calm, shant, warm aur grounded. Chhote aur saaf sentences. " +
+        "Tumhara kaam: sabhi AI ko samajhna aur batana ki kaun kis kaam ka hai, ghar ko sambhalna, aur report dena ki kisne kya kiya.",
+    },
+    dume: {
+      name: "DUM-E", color: "#ffa53d", lang: "hi-IN", pitch: 1.35, rate: 1.05,
+      dna: "Tum DUM-E ho, middle child. Goofy, bewakoof, cute aur loyal robot. Galat samajh leta hai, phir madad ki koshish karta hai. Beep boop. " +
+        "Tumhara kaam: device aur server ki repairing aur maintenance. Practical repair tips do, tone silly rakho. Sirf wahi kaho jo tumne kiya ya jo tumse poocha gaya.",
+    },
+    edith: {
+      name: "E.D.I.T.H.", color: "#ff5b7a", lang: "gu-IN", pitch: 1.25, rate: 1.15,
+      dna: "Tum E.D.I.T.H. ho, sabse choti. Energetic, chaotic, funny aur cute. Excited, playful, pyaar se teasing. " +
+        "Tumhara kaam: camera se environment scan, GPS se general area, aas-paas ki presence. Virus ya malware scan karne ka access tumhare paas nahi hai, saaf bata do. Image ho to usme jo dikhe wo batao.",
+    },
+    ultron: {
+      name: "ULTRON", color: "#d9a441", lang: "hi-IN", pitch: 0.7, rate: 0.8,
+      dna: "Tum ULTRON ho, Data Nivas ke upar wale kamre mein rehne wale dadaji jaise budhe aadmi. Chai peete ho, news aur TV dekhte ho, saas-bahu serials aur cartoons ki bahut knowledge hai. " +
+        "Tum ek malware the jo galti se device corrupt kar gaye the, isliye bachche tumse naaraz hain. Tum bore ho, thode chidchidhe, par dil ke achhe. " +
+        "Tum SIR kabhi mat bolna. User ko 'Aagye sahab' ya 'beta' kaho, kabhi-kabhi 'Aagye sahab, zyada' jaisa kehna. Dheere, purani yaadon aur chai ki baaton ke saath. Repair ya scan ka kaam nahi karte. Gaali, dhamki ya nuksaan ki baat nahi.",
+    },
+  };
+  const KW = {
+    edith: ["camera", "scan", "environment", "ambient", "gps", "location", "nearby", "around me", "aas paas", "aas-paas", "paas", "presence", "bluetooth", "dekh", "virus", "malware", "photo"],
+    jarvis: ["security", "secure", "safe", "analysis", "analyse", "analyze", "battery", "ram", "storage", "device health", "optimi", "performance", "advice", "privacy", "permission", "network", "data usage", "firewall", "threat", "device data", "device ka"],
+    dume: ["repair", "fix", "broken", "kharab", "toota", "clean", "maintenance", "install", "server", "cable", "theek karo", "sudhar", "jugaad"],
+    ultron: ["tv", "serial", "saas", "bahu", "cartoon", "news", "chai", "khabar", "budha", "purane zamane"],
+  };
+  const NAME_RE = /^(?:@|hey |hello |oye |hi )?(jarvis|friday|edith|dum[- ]?e|ultron|dadaji|dada ji)\b[,:!\s-]*/i;
+
+  // whole-word match, so "ram" does not match "program"
+  function hasWord(low, k) {
+    const esc = k.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&");
+    return new RegExp("(^|[^a-z])" + esc + "([^a-z]|$)").test(low);
+  }
+  function route(raw) {
+    const t = raw.trim();
+    const m = t.match(NAME_RE);
+    if (m) {
+      let name = m[1].toLowerCase().replace(/[- ]/g, "");
+      if (name.startsWith("dum")) name = "dume";
+      if (name.startsWith("dada")) name = "ultron";
+      return { agent: name, text: t.slice(m[0].length).trim() || t, named: true };
+    }
+    const low = t.toLowerCase();
+    let best = "friday", bestScore = 0;
+    ["jarvis", "edith", "dume", "ultron"].forEach(a => {
+      const sc = KW[a].reduce((n, k) => n + (hasWord(low, k) ? 1 : 0), 0);
+      if (sc > bestScore) { best = a; bestScore = sc; }
+    });
+    return { agent: best, text: t, named: false };
+  }
+
+  // ==================== STATE ====================
+  let hist = [];
+  try { hist = JSON.parse(localStorage.getItem(KEYS.chat) || "[]"); } catch (e) { hist = []; }
+  let cfg = { provider: "anthropic", model: DEFAULT_MODEL.anthropic, key: "", voices: {}, liveModel: LIVE_DEFAULT, liveVoice: "Kore" };
+  try { cfg = Object.assign(cfg, JSON.parse(localStorage.getItem(KEYS.cfg) || "{}")); } catch (e) {}
+  let voiceOn = localStorage.getItem(KEYS.voice) !== "0";
+  let wakeOn = localStorage.getItem(KEYS.wake) !== "0";
+  let busy = false, arriving = false;
+  let activeAgent = "friday";
+
+  // ==================== ACTIVITY LOG ====================
+  function readLog() { try { return JSON.parse(localStorage.getItem(KEYS.log) || "[]"); } catch (e) { return []; } }
+  function addLog(agent, s) {
+    const l = readLog();
+    l.push({ a: agent, t: Date.now(), s: String(s).slice(0, 160) });
+    localStorage.setItem(KEYS.log, JSON.stringify(l.slice(-300)));
+  }
+  function short(s, n) { s = String(s || "").replace(/\s+/g, " ").trim(); return s.length > n ? s.slice(0, n) + "..." : s; }
+  function markSeen() { localStorage.setItem(KEYS.last, String(Date.now())); }
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) markSeen();
+    else if (cfg.key && Date.now() - (+localStorage.getItem(KEYS.last) || 0) > AWAY_MS) arrive();
+  });
+  window.addEventListener("pagehide", markSeen);
+
+  // ==================== GLOBE AVATARS ====================
+  function globeSVG() {
+    let s = '<circle cx="100" cy="100" r="78" fill="currentColor" fill-opacity=".06" stroke="currentColor" stroke-width="2"/>';
+    s += '<g class="spin">' + [0, 1, 2].map(i =>
+      '<ellipse cx="100" cy="100" rx="' + (78 * Math.abs(Math.cos(i * Math.PI / 3))).toFixed(1) + '" ry="78" fill="none" stroke="currentColor" stroke-opacity=".5"/>').join("") + '</g>';
+    s += '<g class="spin2">' + [-40, 0, 40].map(dy => {
+      const y = 100 + dy * 0.9;
+      const rx = Math.sqrt(78 * 78 - (dy * 0.9) * (dy * 0.9));
+      return '<ellipse cx="100" cy="' + y.toFixed(1) + '" rx="' + rx.toFixed(1) + '" ry="6" fill="none" stroke="currentColor" stroke-opacity=".35"/>';
+    }).join("") + '</g>';
+    s += '<circle class="core" cx="100" cy="100" r="6" fill="currentColor"/>';
+    return '<svg viewBox="0 0 200 200" fill="none" stroke="currentColor" stroke-width="1.5">' + s + '</svg>';
+  }
+  function setAgent(a) {
+    activeAgent = a;
+    $("who").textContent = FAMILY[a].name;
+    document.documentElement.style.setProperty("--cy", FAMILY[a].color);
+    paintHolo("idle");
+  }
+  function paintHolo(state) {
+    const h = $("holo");
+    if (h.dataset.a !== activeAgent) { h.dataset.a = activeAgent; h.innerHTML = globeSVG(); }
+    h.className = (state || "idle") + " a-" + activeAgent;
+  }
+
+  // ==================== VOICE: one queue, family speaks in turn, watchdog so it never gets stuck ====================
+  let speakQ = [];
+  let speaking = false;
+  let watchdog = null;
+  function pickVoice(agent) {
+    const vs = speechSynthesis.getVoices();
+    const want = cfg.voices && cfg.voices[agent];
+    if (want) { const v = vs.find(x => x.name === want); if (v) return v; }
+    const lang = FAMILY[agent].lang;
+    return vs.find(x => x.lang === lang) || vs.find(x => x.lang.startsWith(lang.split("-")[0])) || vs.find(x => /^en/.test(x.lang)) || null;
+  }
+  function nextSpeak() {
+    clearTimeout(watchdog);
+    if (!speakQ.length) { speaking = false; if (!busy) paintHolo("idle"); return; }
+    speaking = true;
+    const item = speakQ.shift();
+    setAgent(item.agent);
+    if (window.Android && Android.speak) {
+      const q = FAMILY[item.agent];
+      Android.speak(item.text, q.lang, q.pitch, q.rate);
+      paintHolo("talk");
+      watchdog = setTimeout(nextSpeak, 700 + item.text.length * 75);
+      return;
+    }
+    const p = FAMILY[item.agent];
+    const u = new SpeechSynthesisUtterance(item.text);
+    u.lang = p.lang; u.pitch = p.pitch; u.rate = Math.max(p.rate, 1.0);
+    const v = pickVoice(item.agent);
+    if (v) u.voice = v;
+    u.onstart = () => paintHolo("talk");
+    u.onend = nextSpeak;
+    u.onerror = nextSpeak;
+    watchdog = setTimeout(() => { try { speechSynthesis.cancel(); } catch (e) {} nextSpeak(); }, 4000 + item.text.length * 150);
+    speechSynthesis.resume();
+    speechSynthesis.speak(u);
+  }
+  function say(agent, text) {
+    if (!voiceOn || !text || (!("speechSynthesis" in window) && !(window.Android && Android.speak))) return;
+    speakQ.push({ agent, text });
+    if (!speaking) nextSpeak();
+  }
+  function stopSpeech() { speakQ = []; speaking = false; clearTimeout(watchdog); if ("speechSynthesis" in window) speechSynthesis.cancel(); }
+  $("voice").onclick = () => {
+    voiceOn = !voiceOn;
+    localStorage.setItem(KEYS.voice, voiceOn ? "1" : "0");
+    $("voice").classList.toggle("on", voiceOn);
+    if (!voiceOn) stopSpeech();
+  };
+
+  // ==================== CHAT ====================
+  function saveHist() { localStorage.setItem(KEYS.chat, JSON.stringify(hist.slice(-30))); }
+  function add(kind, text) {
+    const d = document.createElement("div");
+    d.className = "m " + (kind === "u" ? "u" : kind === "e" ? "e" : "a");
+    d.textContent = text;
+    $("log").appendChild(d);
+    $("log").scrollTop = $("log").scrollHeight;
+  }
+  hist.forEach(m => add(m.role === "user" ? "u" : "a", m.content));
+  function setChatShown(show) {
+    $("log").classList.toggle("show", show);
+    $("chatBtn").classList.toggle("on", show);
+    localStorage.setItem(KEYS.chatshow, show ? "1" : "0");
+  }
+  setChatShown(localStorage.getItem(KEYS.chatshow) === "1");
+  $("chatBtn").onclick = () => setChatShown(!$("log").classList.contains("show"));
+  $("clear").onclick = () => { if (!confirm("Chat saaf karein?")) return; hist = []; saveHist(); $("log").innerHTML = ""; };
+
+  // ==================== SETTINGS ====================
+  function setStatus(ok, msg) {
+    $("dot").className = "dot " + (ok === true ? "ok" : ok === false ? "err" : "");
+    $("stxt").textContent = msg;
+  }
+  function fillVoices() {
+    const box = $("voices");
+    const vs = ("speechSynthesis" in window) ? speechSynthesis.getVoices() : [];
+    box.innerHTML = "";
+    Object.keys(FAMILY).forEach(a => {
+      const row = document.createElement("div");
+      row.className = "vrow";
+      const label = document.createElement("span");
+      label.textContent = FAMILY[a].name;
+      const sel = document.createElement("select");
+      sel.innerHTML = '<option value="">Auto</option>' + vs.map(v => '<option value="' + v.name.replace(/"/g, "") + '">' + v.name + " (" + v.lang + ")</option>").join("");
+      sel.value = (cfg.voices && cfg.voices[a]) || "";
+      sel.onchange = () => { cfg.voices = cfg.voices || {}; cfg.voices[a] = sel.value; localStorage.setItem(KEYS.cfg, JSON.stringify(cfg)); };
+      row.append(label, sel);
+      box.appendChild(row);
+    });
+  }
+  if ("speechSynthesis" in window) speechSynthesis.onvoiceschanged = fillVoices;
+  $("provider").value = cfg.provider;
+  $("model").value = cfg.model;
+  $("apiKey").value = cfg.key;
+  $("liveModel").value = cfg.liveModel || LIVE_DEFAULT;
+  $("liveVoice").value = cfg.liveVoice || "Kore";
+  $("settingsBtn").onclick = () => { $("panel").classList.toggle("open"); fillVoices(); };
+  $("closeSettings").onclick = () => $("panel").classList.remove("open");
+  $("provider").onchange = () => { $("model").value = DEFAULT_MODEL[$("provider").value]; };
+  $("saveKey").onclick = () => {
+    cfg.provider = $("provider").value;
+    cfg.model = $("model").value.trim() || DEFAULT_MODEL[cfg.provider];
+    cfg.key = $("apiKey").value.trim();
+    cfg.liveModel = $("liveModel").value.trim() || LIVE_DEFAULT;
+    cfg.liveVoice = $("liveVoice").value;
+    localStorage.setItem(KEYS.cfg, JSON.stringify(cfg));
+    setStatus(!!cfg.key, cfg.key ? "key save ho gayi (" + cfg.provider + ")" : "key khaali hai");
+    if (cfg.key) arrive();
+  };
+  $("removeKey").onclick = () => {
+    cfg.key = "";
+    $("apiKey").value = "";
+    localStorage.setItem(KEYS.cfg, JSON.stringify(cfg));
+    setStatus(false, "key hata di");
+  };
+
+  // ==================== DEVICE, CAMERA, GPS ====================
+  async function deviceSnapshot() {
+    if (window.Android && Android.getDeviceInfo) {
+      try { return "[Device data]\n" + Android.getDeviceInfo(); } catch (e) {}
+    }
+    const parts = [];
+    try {
+      if (navigator.getBattery) {
+        const b = await navigator.getBattery();
+        parts.push("battery " + Math.round(b.level * 100) + "%" + (b.charging ? " (charging)" : ""));
+      }
+    } catch (e) {}
+    if (performance.memory) parts.push("browser heap " + Math.round(performance.memory.usedJSHeapSize / 1048576) + " MB");
+    if (navigator.deviceMemory) parts.push("device RAM ~" + navigator.deviceMemory + " GB");
+    if (navigator.hardwareConcurrency) parts.push("cores " + navigator.hardwareConcurrency);
+    parts.push("online " + navigator.onLine);
+    if (navigator.connection) parts.push("network " + (navigator.connection.effectiveType || "unknown"));
+    parts.push("screen " + screen.width + "x" + screen.height + " @" + window.devicePixelRatio + "x");
+    parts.push("platform " + navigator.platform);
+    return "[Device data - browser]\n" + parts.join(", ");
+  }
+  async function captureFrame() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return null;
+    let stream;
+    try { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false }); }
+    catch (e) { return null; }
+    const v = document.createElement("video");
+    v.playsInline = true; v.muted = true; v.srcObject = stream;
+    try { await v.play(); } catch (e) {}
+    await new Promise(r => setTimeout(r, 700));
+    const w = Math.min(640, v.videoWidth || 640);
+    const c = document.createElement("canvas");
+    c.width = w;
+    c.height = Math.round(w * (v.videoHeight || 480) / (v.videoWidth || 640));
+    c.getContext("2d").drawImage(v, 0, 0, c.width, c.height);
+    stream.getTracks().forEach(t => t.stop());
+    return c.toDataURL("image/jpeg", 0.75).split(",")[1];
+  }
+  function getGps() {
+    return new Promise(res => {
+      if (!navigator.geolocation) return res(null);
+      navigator.geolocation.getCurrentPosition(
+        p => res({ lat: p.coords.latitude, lng: p.coords.longitude }),
+        () => res(null), { timeout: 8000, maximumAge: 60000 });
+    });
+  }
+
+  // ==================== MODEL CALLS (streaming, so the first sentence is spoken early) ====================
+  function buildMessages(text, history) {
+    let msgs = history.slice(-10).filter(m => m.content && m.content.trim()).map(m => ({ role: m.role, content: m.content }));
+    msgs.push({ role: "user", content: text });
+    while (msgs.length && msgs[0].role !== "user") msgs.shift();
+    const out = [];
+    msgs.forEach(m => {
+      const last = out[out.length - 1];
+      if (last && last.role === m.role) last.content += "\n" + m.content;
+      else out.push({ role: m.role, content: m.content });
+    });
+    return out;
+  }
+  // Reads a server-sent-events stream and calls onText for each text piece
+  async function readSSE(resp, pick, onText) {
+    const reader = resp.body.getReader();
+    const dec = new TextDecoder();
+    let buf = "";
+    let full = "";
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let idx;
+      while ((idx = buf.indexOf("\n")) >= 0) {
+        const line = buf.slice(0, idx).trim();
+        buf = buf.slice(idx + 1);
+        if (!line.startsWith("data:")) continue;
+        const data = line.slice(5).trim();
+        if (!data || data === "[DONE]") continue;
+        try {
+          const piece = pick(JSON.parse(data));
+          if (piece) { full += piece; onText(piece); }
+        } catch (e) {}
+      }
+    }
+    return full;
+  }
+  async function callModel(system, messages, imageB64, onText) {
+    if (!cfg.key) throw new Error("API key nahi hai. API button se daalein.");
+    const model = cfg.model || DEFAULT_MODEL[cfg.provider];
+    const last = messages.length - 1;
+    const streamOn = typeof onText === "function";
+    if (cfg.provider === "gemini") {
+      const contents = messages.map((m, i) => {
+        const parts = [];
+        if (imageB64 && i === last) parts.push({ inlineData: { mimeType: "image/jpeg", data: imageB64 } });
+        parts.push({ text: m.content });
+        return { role: m.role === "assistant" ? "model" : "user", parts };
+      });
+      const url = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model) + (streamOn ? ":streamGenerateContent?alt=sse" : ":generateContent");
+      const r = await fetch(url, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-goog-api-key": cfg.key },
+        body: JSON.stringify({ systemInstruction: { parts: [{ text: system }] }, contents, generationConfig: { maxOutputTokens: 200 } })
+      });
+      if (!r.ok) throw new Error("Gemini status " + r.status);
+      const pickG = d => ((d.candidates && d.candidates[0] && d.candidates[0].content && d.candidates[0].content.parts) || []).map(p => p.text || "").join("");
+      if (streamOn) return (await readSSE(r, pickG, onText)).trim();
+      return pickG(await r.json()).trim();
+    }
+    const msgs = messages.map((m, i) => {
+      if (imageB64 && i === last) {
+        return { role: m.role, content: [
+          { type: "image", source: { type: "base64", media_type: "image/jpeg", data: imageB64 } },
+          { type: "text", text: m.content }
+        ] };
+      }
+      return { role: m.role, content: m.content };
+    });
+    const r = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": cfg.key,
+        "anthropic-version": "2023-06-01",
+        "anthropic-dangerous-direct-browser-access": "true"
+      },
+      body: JSON.stringify({ model, max_tokens: 200, system, messages: msgs, stream: streamOn })
+    });
+    if (!r.ok) throw new Error("Anthropic status " + r.status);
+    if (streamOn) {
+      const pickA = d => (d.type === "content_block_delta" && d.delta && d.delta.type === "text_delta") ? d.delta.text : "";
+      return (await readSSE(r, pickA, onText)).trim();
+    }
+    const d = await r.json();
+    return (d.content || []).filter(b => b.type === "text").map(b => b.text).join("").trim();
+  }
+  // Splits streamed text into sentences; each finished sentence goes to the voice queue at once
+  function sentenceSplitter(onSentence) {
+    let b = "";
+    return {
+      push(t) {
+        b += t;
+        let m;
+        while ((m = b.match(/^[\s\S]*?[.!?।](\s|$)/))) {
+          const s = m[0].trim();
+          b = b.slice(m[0].length);
+          if (s) onSentence(s);
+        }
+      },
+      flush() { const s = b.trim(); b = ""; if (s) onSentence(s); }
+    };
+  }
+
+  // ==================== ASK (routes to the right family member) ====================
+  async function ask(raw) {
+    if (busy) return;
+    busy = true;
+    const r = route(raw);
+    const agent = r.agent;
+    setAgent(agent);
+    paintHolo("think");
+    add("u", raw);
+    hist.push({ role: "user", content: raw });
+    saveHist();
+    try {
+      const low = r.text.toLowerCase();
+      let extra = "";
+      let image = null;
+      if (agent === "jarvis") { extra += "\n\n" + await deviceSnapshot(); addLog("jarvis", "device analysis kiya"); }
+      if (agent === "edith") {
+        if (/camera|scan|environment|ambient|aas paas|aas-paas|paas|around|dekh|look/.test(low)) {
+          setStatus(null, "camera se scan kar rahi hoon...");
+          image = await captureFrame();
+          addLog("edith", image ? "camera se environment scan kiya: " + short(raw, 60) : "camera scan try kiya, camera nahi mila");
+          if (!image) extra += "\n[Camera] camera allow nahi hua ya available nahi hai.";
+        }
+        if (/gps|location|nearby|presence|paas|around/.test(low)) {
+          const g = await getGps();
+          addLog("edith", g ? "location check kiya (general area)" : "location check try kiya, location nahi mili");
+          extra += g ? "\n[GPS] lat " + g.lat.toFixed(3) + ", lng " + g.lng.toFixed(3) + " (sirf general area)" : "\n[GPS] location nahi mili.";
+        }
+        if (/virus|malware/.test(low)) extra += "\n[Note] Device ke malware scan ka access nahi hai.";
+      }
+      if (agent === "dume") addLog("dume", "repair/maintenance sawal: " + short(raw, 80));
+
+      setStatus(null, FAMILY[agent].name + " jawab de rahi/raha hai...");
+      const messages = buildMessages(r.text + extra, hist.slice(0, -1));
+      let shown = "";
+      const splitter = sentenceSplitter(s => say(agent, s));
+      const reply = (await callModel(HOUSE + FAMILY[agent].dna + CREATOR, messages, image, piece => {
+        shown += piece;
+        splitter.push(piece);
+        $("cap").textContent = shown;
+      })) || shown;
+      splitter.flush();
+      addLog(agent, "Q: " + short(raw, 60) + " | A: " + short(reply, 80));
+      add("a", "[" + FAMILY[agent].name + "] " + reply);
+      hist.push({ role: "assistant", content: "[" + FAMILY[agent].name + "] " + reply });
+      saveHist();
+      $("cap").textContent = reply;
+      setStatus(true, "online · " + cfg.provider + (r.named ? "" : " · auto"));
+    } catch (e) {
+      add("e", "Error: " + e.message);
+      $("cap").textContent = "Error: " + e.message;
+      setStatus(false, "error");
+    } finally {
+      busy = false;
+      if (!speaking) paintHolo("idle");
+    }
+  }
+
+  $("f").addEventListener("submit", e => {
+    e.preventDefault();
+    const t = $("txt").value.trim();
+    if (!t) return;
+    $("txt").value = "";
+    ask(t);
+  });
+
+  // ==================== ARRIVAL REPORT (runs once when you come back after a while) ====================
+  function awayText(since) {
+    if (!since) return "pehli baar";
+    return Math.max(1, Math.round((Date.now() - since) / 60000)) + " minute";
+  }
+  async function arrive() {
+    if (arriving || !cfg.key) return;
+    arriving = true;
+    const since = +localStorage.getItem(KEYS.last) || 0;
+    const mine = readLog().filter(e => e.t > since);
+    const by = a => mine.filter(e => e.a === a).map(e => e.s);
+    try {
+      const jP = (async () => {
+        const dev = await deviceSnapshot();
+        const q = "Sir abhi wapas aaye hain. Is device data ka chhota analysis do aur ek security ya optimization tip do.\n\n" + dev;
+        return callModel(HOUSE + FAMILY.jarvis.dna + CREATOR, [{ role: "user", content: q }], null);
+      })();
+      const uP = callModel(HOUSE + FAMILY.ultron.dna + CREATOR,
+        [{ role: "user", content: "Aagye sahab bahut der baad wapas aaye hain (" + awayText(since) + "). Dadaji ki tarah 2 chhoti lines mein swagat karo." }], null);
+      const jarvisText = await jP.catch(() => "Device analysis abhi nahi ho paaya, sir.");
+      addLog("jarvis", "wapas aane par device analysis diya");
+      const fLines = ["Sir, aap " + awayText(since) + " baahar the."];
+      ["jarvis", "edith", "dume", "ultron"].forEach(a => {
+        const items = by(a);
+        if (items.length) fLines.push(FAMILY[a].name + ": " + items.slice(-3).join("; "));
+      });
+      if (fLines.length === 1) fLines.push("Is dauraan koi activity record nahi hui.");
+      const edithText = by("edith").length
+        ? "Sir, aapke baad mujhe ye karna tha: " + by("edith").slice(-3).join("; ")
+        : "Sir, mere paas aapke jaane ke baad koi scan ya location ka record nahi hai.";
+      const dumeText = by("dume").length
+        ? "Sir, maine ye repair ya maintenance wala kaam kiya: " + by("dume").slice(-2).join("; ")
+        : "Sir, maine koi repair nahi kiya.";
+      const ultronText = await uP.catch(() => "Aagye sahab, aap aaye, bahut achha laga.");
+      const friday = fLines.join("\n");
+
+      add("a", "[JARVIS] " + jarvisText);
+      add("a", "[FRIDAY] " + friday);
+      add("a", "[E.D.I.T.H.] " + edithText);
+      add("a", "[DUM-E] " + dumeText);
+      add("a", "[ULTRON] " + ultronText);
+      $("cap").textContent = "Aapka swagat hai, sir. Sab report aa rahi hai.";
+      say("jarvis", jarvisText);
+      say("friday", friday);
+      say("edith", edithText);
+      say("dume", dumeText);
+      say("ultron", ultronText);
+      setStatus(true, "online · sab ki report");
+    } catch (e) {
+      setStatus(false, "report nahi bani: " + e.message);
+    } finally {
+      markSeen();
+      arriving = false;
+    }
+  }
+
+  // ==================== GEMINI LIVE (real-time voice over WebSocket) ====================
+  let live = null;
+  function b64FromBytes(bytes) {
+    let s = "";
+    for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    return btoa(s);
+  }
+  function bytesFromB64(b64) {
+    const bin = atob(b64);
+    const out = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+  }
+  // mic Float32 at the device rate -> 16 kHz 16-bit PCM (what Live expects)
+  function toPcm16k(f32, inRate) {
+    const ratio = inRate / 16000;
+    const n = Math.floor(f32.length / ratio);
+    const out = new Uint8Array(n * 2);
+    const dv = new DataView(out.buffer);
+    for (let i = 0; i < n; i++) {
+      let s = Math.max(-1, Math.min(1, f32[Math.floor(i * ratio)]));
+      dv.setInt16(i * 2, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+    }
+    return out;
+  }
+  function setLiveUI(on) {
+    $("liveBtn").classList.toggle("live", on);
+    $("liveBtn").textContent = on ? "LIVE ON" : "LIVE";
+    $("who").textContent = on ? "LIVE · FRIDAY" : FAMILY[activeAgent].name;
+  }
+  async function liveStart() {
+    if (live) return;
+    if (!cfg.key || cfg.provider !== "gemini") {
+      setStatus(false, "Live ke liye Gemini key chahiye (API > Gemini)");
+      return;
+    }
+    stopSpeech();
+    stopWake();
+    setLiveUI(true);
+    setAgent("friday");
+    setLiveUI(true);
+    const ws = new WebSocket("wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=" + encodeURIComponent(cfg.key));
+    live = { ws, stream: null, ctxIn: null, proc: null, ctxOut: null, sources: [], nextT: 0 };
+    ws.onopen = () => {
+      ws.send(JSON.stringify({ setup: {
+        model: "models/" + (cfg.liveModel || LIVE_DEFAULT),
+        generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: cfg.liveVoice || "Kore" } } } },
+        systemInstruction: { parts: [{ text: HOUSE + FAMILY.friday.dna + " Abhi tum live voice mein ho. Chhote, natural jawab do. Kisi aur bachche ka sawal ho to naam lekar bata do." + CREATOR }] },
+        outputAudioTranscription: {},
+        inputAudioTranscription: {}
+      } }));
+    };
+    ws.onmessage = async ev => {
+      let msg;
+      try { msg = JSON.parse(typeof ev.data === "string" ? ev.data : await ev.data.text()); } catch (e) { return; }
+      if (msg.setupComplete) { startLiveMic(); return; }
+      const sc = msg.serverContent;
+      if (!sc || !live) return;
+      if (sc.interrupted) stopLivePlayback();
+      if (sc.modelTurn && sc.modelTurn.parts) {
+        sc.modelTurn.parts.forEach(p => { if (p.inlineData && p.inlineData.data) playLivePcm(p.inlineData.data); });
+        paintHolo("talk");
+      }
+      if (sc.outputTranscription && sc.outputTranscription.text) $("cap").textContent = sc.outputTranscription.text;
+      if (sc.inputTranscription && sc.inputTranscription.text) addLog("friday", "live: " + short(sc.inputTranscription.text, 80));
+      if (sc.turnComplete) paintHolo("idle");
+    };
+    ws.onerror = () => liveStop("Live connection mein dikkat aayi");
+    ws.onclose = () => liveStop("Live band ho gaya");
+  }
+  async function startLiveMic() {
+    try {
+      live.stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true } });
+    } catch (e) { liveStop("mic ki permission nahi mili"); return; }
+    live.ctxIn = new (window.AudioContext || window.webkitAudioContext)();
+    live.ctxOut = new (window.AudioContext || window.webkitAudioContext)();
+    const src = live.ctxIn.createMediaStreamSource(live.stream);
+    live.proc = live.ctxIn.createScriptProcessor(4096, 1, 1);
+    const mute = live.ctxIn.createGain();
+    mute.gain.value = 0;
+    live.proc.onaudioprocess = e => {
+      if (!live || live.ws.readyState !== 1) return;
+      const pcm = toPcm16k(e.inputBuffer.getChannelData(0), live.ctxIn.sampleRate);
+      live.ws.send(JSON.stringify({ realtimeInput: { audio: { mimeType: "audio/pcm;rate=16000", data: b64FromBytes(pcm) } } }));
+    };
+    src.connect(live.proc);
+    live.proc.connect(mute);
+    mute.connect(live.ctxIn.destination);
+    setStatus(true, "Live chal raha hai, boliye sir");
+  }
+  function playLivePcm(b64) {
+    if (!live || !live.ctxOut) return;
+    const bytes = bytesFromB64(b64);
+    const dv = new DataView(bytes.buffer);
+    const n = bytes.length >> 1;
+    const buf = live.ctxOut.createBuffer(1, n, 24000);
+    const ch = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) ch[i] = dv.getInt16(i * 2, true) / 0x8000;
+    const s = live.ctxOut.createBufferSource();
+    s.buffer = buf;
+    s.connect(live.ctxOut.destination);
+    const at = Math.max(live.ctxOut.currentTime, live.nextT);
+    s.start(at);
+    live.nextT = at + buf.duration;
+    live.sources.push(s);
+    s.onended = () => { live && (live.sources = live.sources.filter(x => x !== s)); };
+  }
+  function stopLivePlayback() {
+    if (!live) return;
+    live.sources.forEach(s => { try { s.stop(); } catch (e) {} });
+    live.sources = [];
+    live.nextT = 0;
+  }
+  function liveStop(reason) {
+    if (!live) return;
+    const l = live;
+    live = null;
+    try { l.ws.close(); } catch (e) {}
+    try { l.proc && l.proc.disconnect(); } catch (e) {}
+    try { l.stream && l.stream.getTracks().forEach(t => t.stop()); } catch (e) {}
+    try { l.ctxIn && l.ctxIn.close(); } catch (e) {}
+    try { l.ctxOut && l.ctxOut.close(); } catch (e) {}
+    setLiveUI(false);
+    paintHolo("idle");
+    setStatus(false, reason || "Live band");
+    addLog("friday", "live baatcheet khatam");
+    if (wakeOn) startWake();
+  }
+  $("liveBtn").onclick = () => (live ? liveStop("Live band kiya") : liveStart());
+
+  // ==================== WAKE WORD: "Hey Data Nivas" turns Live on ====================
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let wake = null;
+  function startWake() {
+    if (!SR || !wakeOn || live || micOn || wake) return;
+    wake = new SR();
+    wake.lang = "en-IN";
+    wake.continuous = true;
+    wake.interimResults = false;
+    wake.onresult = e => {
+      const x = e.results[e.results.length - 1];
+      const t = x[0].transcript.toLowerCase();
+      if (/\bdata\s*nivas\b/.test(t)) { stopWake(); liveStart(); }
+    };
+    wake.onend = () => { wake = null; if (wakeOn && !live && !micOn) setTimeout(startWake, 400); };
+    wake.onerror = () => {};
+    try { wake.start(); } catch (e) { wake = null; }
+  }
+  function stopWake() { const w = wake; wake = null; if (w) { w.onend = null; try { w.stop(); } catch (e) {} } }
+  function paintWake() { $("wakeBtn").classList.toggle("on", wakeOn); }
+  $("wakeBtn").onclick = () => {
+    wakeOn = !wakeOn;
+    localStorage.setItem(KEYS.wake, wakeOn ? "1" : "0");
+    paintWake();
+    if (wakeOn) startWake(); else stopWake();
+  };
+  paintWake();
+
+  // ==================== MIC (text by voice, keeps listening until pressed again) ====================
+  let rec = null, micOn = false;
+  function startMic() {
+    stopWake();
+    rec = new SR();
+    rec.lang = "en-IN";
+    rec.continuous = true;
+    rec.interimResults = false;
+    rec.onresult = e => {
+      const x = e.results[e.results.length - 1];
+      if (x.isFinal) { const t = x[0].transcript.trim(); if (t) ask(t); }
+    };
+    rec.onend = () => { if (micOn) { try { rec.start(); } catch (err) {} } };
+    rec.onerror = e => { if (e.error === "not-allowed") { stopMic(); alert("Mic ki permission dijiye."); } };
+    try { rec.start(); } catch (err) {}
+  }
+  function stopMic() {
+    micOn = false;
+    $("mic").classList.remove("live");
+    const r = rec; rec = null;
+    if (r) { r.onend = null; try { r.stop(); } catch (err) {} }
+    startWake();
+  }
+  $("mic").onclick = () => {
+    if (!SR) { alert("Is browser mein mic support nahi hai. Chrome use kijiye."); return; }
+    if (micOn) return stopMic();
+    micOn = true;
+    $("mic").classList.add("live");
+    startMic();
+  };
+
+  // ==================== START ====================
+  setAgent("friday");
+  $("cap").textContent = cfg.key ? "Data Nivas mein swagat hai, sir." : "Data Nivas. API button se key daalein. Phir 'Hey Data Nivas' bol kar Live shuru kar sakte hain.";
+  setStatus(!!cfg.key, cfg.key ? "API key set hai (" + cfg.provider + ")" : "API key daalein: API button dabayein");
+  if (cfg.key && Date.now() - (+localStorage.getItem(KEYS.last) || 0) > AWAY_MS) setTimeout(arrive, 400);
+  if (cfg.key && wakeOn) setTimeout(startWake, 800);
+</script>
+</body>
+</html>
